@@ -1,0 +1,32 @@
+﻿@inject IJSRuntime JSRuntime
+
+<button @onclick="LoadAndSaveExcel">Load and Save Excel</button>
+
+@code {
+    private async Task LoadAndSaveExcel(MouseEventArgs e)
+    {
+        //パスワードで保護されたExcelファイルを読み込みます。
+        FileStream inputStream = new FileStream(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot") + "/BookWithPassword.xlsx", FileMode.Open);
+
+        //ワークブックを開くためにはOpenPasswordを設定したWorkbookLoadOptionsとともにWorkbook.Load()メソッドを実行します。
+        WorkbookLoadOptions options = new WorkbookLoadOptions();
+        options.OpenPassword = "MyPassword";
+        Workbook workbook = Workbook.Load(inputStream, options);
+
+        //セルの値を編集します。
+        workbook.Worksheets[0].GetCell("A2").Value = "UPDATED";
+
+        //編集したワークブックをMemoryStreamに保存します。
+        using var memStream = new MemoryStream();
+        workbook.Save(memStream);
+
+        //編集したワークブックを(パスワードで保護されたまま)Excelファイルとしてダウンロードします。
+        await this.JSRuntime.InvokeVoidAsync("downloadFromByteArray", new
+        {
+            byteArray = memStream.ToArray(),
+            FileName = "BookWithPassword_Updated.xlsx",
+            ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        });
+    }
+
+}
